@@ -96,13 +96,13 @@ lib/
 
 ## 📦 Dependencies
 
-| Package                                                           | Version | Purpose                    |
-| ----------------------------------------------------------------- | ------- | -------------------------- |
-| [flutter](https://flutter.dev)                                    | SDK     | Framework                  |
-| [google_fonts](https://pub.dev/packages/google_fonts)             | ^6.2.1  | বাংলা ফন্ট (Hind Siliguri) |
-| [shared_preferences](https://pub.dev/packages/shared_preferences) | ^2.2.3  | অফলাইন ডাটা স্টোরেজ        |
-| [cupertino_icons](https://pub.dev/packages/cupertino_icons)       | ^1.0.6  | iOS-style icons            |
-| [flutter_lints](https://pub.dev/packages/flutter_lints) (dev)     | ^3.0.0  | Lint rules                 |
+| Package                                                           | Version | Purpose             |
+| ----------------------------------------------------------------- | ------- | ------------------- |
+| [flutter](https://flutter.dev)                                    | SDK     | Framework           |
+| [google_fonts](https://pub.dev/packages/google_fonts)             | ^6.2.1  | বাংলা ফন্ট          |
+| [shared_preferences](https://pub.dev/packages/shared_preferences) | ^2.2.3  | অফলাইন ডাটা স্টোরেজ |
+| [cupertino_icons](https://pub.dev/packages/cupertino_icons)       | ^1.0.6  | iOS-style icons     |
+| [flutter_lints](https://pub.dev/packages/flutter_lints) (dev)     | ^3.0.0  | Lint rules          |
 
 ---
 
