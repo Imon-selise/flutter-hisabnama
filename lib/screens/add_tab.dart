@@ -135,11 +135,8 @@ class AddTabState extends State<AddTab> {
   }
 
   List<Widget> _productForm() {
-    final supplierNames = Store.I.products
-        .map((p) => p.supplierName.trim())
-        .where((n) => n.isNotEmpty)
-        .toSet()
-        .toList();
+    final supplierNames =
+        Store.I.products.map((p) => p.supplierName.trim()).where((n) => n.isNotEmpty).toSet().toList();
     final supplierMobiles = Store.I.products
         .map((p) => rawPhone(p.supplierMobile))
         .where((n) => n.isNotEmpty && n != '+88')
@@ -154,10 +151,7 @@ class AddTabState extends State<AddTab> {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('সরবরাহকারীর নাম'),
-            SuggestTextField(
-                controller: _pSupplierName,
-                hint: 'নাম দিন',
-                suggestions: supplierNames),
+            SuggestTextField(controller: _pSupplierName, hint: 'নাম দিন', suggestions: supplierNames),
           ])),
           const SizedBox(width: 11),
           Expanded(
@@ -258,11 +252,7 @@ class AddTabState extends State<AddTab> {
     final qty = double.tryParse(_sQty.text) ?? 0;
     final price = double.tryParse(_sPrice.text) ?? 0;
     final over = sel != null && qty > sel.qty;
-    final buyerNames = Store.I.sales
-        .map((s) => s.buyerName.trim())
-        .where((n) => n.isNotEmpty)
-        .toSet()
-        .toList();
+    final buyerNames = Store.I.sales.map((s) => s.buyerName.trim()).where((n) => n.isNotEmpty).toSet().toList();
     final buyerMobiles = Store.I.sales
         .map((s) => rawPhone(s.buyerMobile))
         .where((n) => n.isNotEmpty && n != '+88')
@@ -277,10 +267,7 @@ class AddTabState extends State<AddTab> {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('ক্রেতার নাম'),
-            SuggestTextField(
-                controller: _sBuyerName,
-                hint: 'নাম দিন',
-                suggestions: buyerNames),
+            SuggestTextField(controller: _sBuyerName, hint: 'নাম দিন', suggestions: buyerNames),
           ])),
           const SizedBox(width: 11),
           Expanded(
