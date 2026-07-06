@@ -59,30 +59,47 @@ class ProductCard extends StatelessWidget {
                       color: const Color(0xFFF4F2FB),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.person_outline, size: 13, color: Color(0xFF7A66C0)),
-                        const SizedBox(width: 5),
-                        Text(
-                          p.supplierName.isNotEmpty ? p.supplierName : '—',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: p.supplierName.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person_outline, size: 13, color: Color(0xFF7A66C0)),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                p.supplierName.isNotEmpty ? p.supplierName : '—',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: p.supplierName.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        const Icon(Icons.phone_outlined, size: 13, color: Color(0xFF7A66C0)),
-                        const SizedBox(width: 5),
-                        Text(
-                          p.supplierMobile.isNotEmpty ? fmtPhone(p.supplierMobile) : '—',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: p.supplierMobile.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
-                            fontWeight: FontWeight.w600,
+                        if (p.supplierMobile.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.phone_outlined, size: 13, color: Color(0xFF7A66C0)),
+                              const SizedBox(width: 5),
+                              Text(
+                                fmtPhone(p.supplierMobile),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: kSubInk,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),

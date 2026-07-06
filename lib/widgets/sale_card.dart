@@ -68,30 +68,47 @@ class SaleCard extends StatelessWidget {
               color: const Color(0xFFFEF5E7),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.person_outline, size: 13, color: Color(0xFFB8862D)),
-                const SizedBox(width: 5),
-                Text(
-                  s.buyerName.isNotEmpty ? s.buyerName : 'ক্রেতা —',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: s.buyerName.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.person_outline, size: 13, color: Color(0xFFB8862D)),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        s.buyerName.isNotEmpty ? s.buyerName : 'ক্রেতা —',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: s.buyerName.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                const Icon(Icons.phone_outlined, size: 13, color: Color(0xFFB8862D)),
-                const SizedBox(width: 5),
-                Text(
-                  s.buyerMobile.isNotEmpty ? fmtPhone(s.buyerMobile) : '—',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: s.buyerMobile.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
-                    fontWeight: FontWeight.w600,
+                if (s.buyerMobile.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.phone_outlined, size: 13, color: Color(0xFFB8862D)),
+                      const SizedBox(width: 5),
+                      Text(
+                        fmtPhone(s.buyerMobile),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: kSubInk,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ],
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/constants.dart';
 import '../store/store.dart';
 import '../widgets/shared_widgets.dart';
@@ -72,12 +73,35 @@ class AddTabState extends State<AddTab> {
       showToast(context, 'পণ্যের নাম দিন', kOrange);
       return;
     }
+    if (_pSupplierName.text.trim().isEmpty) {
+      showToast(context, 'সরবরাহকারীর নাম দিন', kOrange);
+      return;
+    }
+    if (rawPhone(_pSupplierMobile.text.trim()) == '+88') {
+      showToast(context, 'সরবরাহকারীর মোবাইল নম্বর দিন', kOrange);
+      return;
+    }
+    final qty = double.tryParse(_pQty.text) ?? 0;
+    if (qty <= 0) {
+      showToast(context, 'সঠিক পরিমাণ দিন', kOrange);
+      return;
+    }
+    final cost = double.tryParse(_pCost.text) ?? 0;
+    if (cost <= 0) {
+      showToast(context, 'ক্রয় মূল্য দিন', kOrange);
+      return;
+    }
+    final price = double.tryParse(_pPrice.text) ?? 0;
+    if (price <= 0) {
+      showToast(context, 'বিক্রয় মূল্য দিন', kOrange);
+      return;
+    }
     Store.I.addProduct(
       _pName.text.trim(),
-      double.tryParse(_pQty.text) ?? 0,
+      qty,
       _pUnit,
-      double.tryParse(_pCost.text) ?? 0,
-      double.tryParse(_pPrice.text) ?? 0,
+      cost,
+      price,
       _pDate,
       supplierName: _pSupplierName.text.trim(),
       supplierMobile: rawPhone(_pSupplierMobile.text.trim()),
@@ -100,10 +124,22 @@ class AddTabState extends State<AddTab> {
       showToast(context, 'পণ্য নির্বাচন করুন', kOrange);
       return;
     }
+    if (_sBuyerName.text.trim().isEmpty) {
+      showToast(context, 'ক্রেতার নাম দিন', kOrange);
+      return;
+    }
+    if (rawPhone(_sBuyerMobile.text.trim()) == '+88') {
+      showToast(context, 'ক্রেতার মোবাইল নম্বর দিন', kOrange);
+      return;
+    }
     final qty = double.tryParse(_sQty.text) ?? 0;
-    final price = double.tryParse(_sPrice.text) ?? 0;
     if (qty <= 0) {
-      showToast(context, 'পরিমাণ দিন', kOrange);
+      showToast(context, 'বিক্রিত পরিমাণ দিন', kOrange);
+      return;
+    }
+    final price = double.tryParse(_sPrice.text) ?? 0;
+    if (price <= 0) {
+      showToast(context, 'বিক্রয় মূল্য দিন', kOrange);
       return;
     }
     final over = Store.I.recordSale(p, qty, price, _sDate,
@@ -151,7 +187,11 @@ class AddTabState extends State<AddTab> {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('সরবরাহকারীর নাম'),
-            SuggestTextField(controller: _pSupplierName, hint: 'নাম দিন', suggestions: supplierNames),
+            SuggestTextField(
+                controller: _pSupplierName,
+                hint: 'নাম দিন',
+                suggestions: supplierNames,
+                onChanged: (_) => setState(() {})),
           ])),
           const SizedBox(width: 11),
           Expanded(
@@ -159,6 +199,7 @@ class AddTabState extends State<AddTab> {
             fieldLabel('সরবরাহকারীর মোবাইল'),
             SuggestTextField(
                 controller: _pSupplierMobile,
+                onChanged: (_) => setState(() {}),
                 hint: 'মোবাইল নম্বর',
                 keyboardType: TextInputType.phone,
                 inputFormatters: [PhoneFormatter()],
@@ -182,6 +223,7 @@ class AddTabState extends State<AddTab> {
               TextField(
                   controller: _pQty,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                   style: const TextStyle(color: kInk, fontSize: 15),
                   decoration: fieldDeco('০')),
             ]),
@@ -223,6 +265,7 @@ class AddTabState extends State<AddTab> {
             TextField(
                 controller: _pCost,
                 keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                 style: const TextStyle(color: kInk, fontSize: 15),
                 decoration: fieldDeco('৳ ০')),
           ])),
@@ -232,6 +275,7 @@ class AddTabState extends State<AddTab> {
             fieldLabel('বিক্রয় মূল্য (একক)'),
             TextField(
                 controller: _pPrice,
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: kInk, fontSize: 15),
                 decoration: fieldDeco('৳ ০')),
@@ -242,7 +286,11 @@ class AddTabState extends State<AddTab> {
       fieldLabel('যোগের তারিখ'),
       _dateField(_pDate, () => _pickDate(true)),
       const SizedBox(height: 22),
-      _submitButton('পণ্য সংরক্ষণ করুন', _submitProduct),
+      _submitButton(
+        'পণ্য সংরক্ষণ করুন',
+        _submitProduct,
+        enabled: _pSupplierName.text.trim().isNotEmpty && rawPhone(_pSupplierMobile.text.trim()) != '+88',
+      ),
     ];
   }
 
@@ -267,7 +315,8 @@ class AddTabState extends State<AddTab> {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('ক্রেতার নাম'),
-            SuggestTextField(controller: _sBuyerName, hint: 'নাম দিন', suggestions: buyerNames),
+            SuggestTextField(
+                controller: _sBuyerName, hint: 'নাম দিন', suggestions: buyerNames, onChanged: (_) => setState(() {})),
           ])),
           const SizedBox(width: 11),
           Expanded(
@@ -278,7 +327,8 @@ class AddTabState extends State<AddTab> {
                 hint: 'মোবাইল নম্বর',
                 keyboardType: TextInputType.phone,
                 inputFormatters: [PhoneFormatter()],
-                suggestions: buyerMobiles),
+                suggestions: buyerMobiles,
+                onChanged: (_) => setState(() {})),
           ])),
         ],
       ),
@@ -337,6 +387,7 @@ class AddTabState extends State<AddTab> {
             fieldLabel('বিক্রিত পরিমাণ'),
             TextField(
                 controller: _sQty,
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                 keyboardType: TextInputType.number,
                 onChanged: (_) => setState(() {}),
                 style: const TextStyle(color: kInk, fontSize: 15),
@@ -348,6 +399,7 @@ class AddTabState extends State<AddTab> {
             fieldLabel('বিক্রয় মূল্য (একক)'),
             TextField(
                 controller: _sPrice,
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                 keyboardType: TextInputType.number,
                 onChanged: (_) => setState(() {}),
                 style: const TextStyle(color: kInk, fontSize: 15),
@@ -376,7 +428,11 @@ class AddTabState extends State<AddTab> {
         ),
       ),
       const SizedBox(height: 16),
-      _submitButton('বিক্রয় নিশ্চিত করুন', _submitSale),
+      _submitButton(
+        'বিক্রয় নিশ্চিত করুন',
+        _submitSale,
+        enabled: _sBuyerName.text.trim().isNotEmpty && rawPhone(_sBuyerMobile.text.trim()) != '+88',
+      ),
     ];
   }
 
@@ -436,10 +492,10 @@ class AddTabState extends State<AddTab> {
     );
   }
 
-  Widget _submitButton(String t, VoidCallback onTap) => SizedBox(
+  Widget _submitButton(String t, VoidCallback onTap, {bool enabled = true}) => SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: onTap,
+          onPressed: enabled ? onTap : null,
           style: ElevatedButton.styleFrom(
             padding: EdgeInsets.zero,
             backgroundColor: Colors.transparent,
@@ -448,14 +504,20 @@ class AddTabState extends State<AddTab> {
           ),
           child: Ink(
             decoration: BoxDecoration(
-              gradient: kHeaderGradient,
+              gradient:
+                  enabled ? kHeaderGradient : const LinearGradient(colors: [Color(0xFFD8D2EA), Color(0xFFD8D2EA)]),
               borderRadius: BorderRadius.circular(15),
-              boxShadow: const [BoxShadow(color: Color(0x526A47E0), blurRadius: 18, offset: Offset(0, 8))],
+              boxShadow:
+                  enabled ? const [BoxShadow(color: Color(0x526A47E0), blurRadius: 18, offset: Offset(0, 8))] : null,
             ),
             child: Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(vertical: 17),
-              child: Text(t, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+              child: Text(t,
+                  style: TextStyle(
+                      color: enabled ? Colors.white : const Color(0xFFB0ABC4),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
             ),
           ),
         ),

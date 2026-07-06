@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/constants.dart';
 import '../models/product.dart';
 import '../store/store.dart';
@@ -168,7 +169,12 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
         decoration: BoxDecoration(border: border ? const Border(bottom: BorderSide(color: Color(0xFFF1EEF8))) : null),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(l, style: const TextStyle(fontSize: 14, color: Color(0xFF6A6580))),
-          Text(v, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(v,
+                textAlign: TextAlign.end,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
+          ),
         ]),
       );
 }
@@ -223,6 +229,7 @@ void _showEditDialog(BuildContext context, Product p) {
                     child: TextField(
                       controller: qtyCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                       decoration: const InputDecoration(labelText: 'পরিমাণ', border: OutlineInputBorder()),
                     ),
                   ),
@@ -244,6 +251,7 @@ void _showEditDialog(BuildContext context, Product p) {
                     child: TextField(
                       controller: costCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                       decoration: const InputDecoration(labelText: 'ক্রয় মূল্য', border: OutlineInputBorder()),
                     ),
                   ),
@@ -251,6 +259,7 @@ void _showEditDialog(BuildContext context, Product p) {
                   Expanded(
                     child: TextField(
                       controller: priceCtrl,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: 'বিক্রয় মূল্য', border: OutlineInputBorder()),
                     ),
@@ -306,13 +315,36 @@ void _showEditDialog(BuildContext context, Product p) {
                         showToast(ctx, 'পণ্যের নাম দিন', kOrange);
                         return;
                       }
+                      if (supplierNameCtrl.text.trim().isEmpty) {
+                        showToast(ctx, 'সরবরাহকারীর নাম দিন', kOrange);
+                        return;
+                      }
+                      if (rawPhone(supplierMobileCtrl.text.trim()) == '+88') {
+                        showToast(ctx, 'সরবরাহকারীর মোবাইল নম্বর দিন', kOrange);
+                        return;
+                      }
+                      final qty = double.tryParse(qtyCtrl.text) ?? 0;
+                      if (qty < 0) {
+                        showToast(ctx, 'পরিমাণ ঋণাত্মক হতে পারে না', kOrange);
+                        return;
+                      }
+                      final cost = double.tryParse(costCtrl.text) ?? 0;
+                      if (cost <= 0) {
+                        showToast(ctx, 'ক্রয় মূল্য দিন', kOrange);
+                        return;
+                      }
+                      final price = double.tryParse(priceCtrl.text) ?? 0;
+                      if (price <= 0) {
+                        showToast(ctx, 'বিক্রয় মূল্য দিন', kOrange);
+                        return;
+                      }
                       Store.I.updateProduct(
                         p.id,
                         nameCtrl.text.trim(),
-                        double.tryParse(qtyCtrl.text) ?? 0,
+                        qty,
                         unit,
-                        double.tryParse(costCtrl.text) ?? 0,
-                        double.tryParse(priceCtrl.text) ?? 0,
+                        cost,
+                        price,
                         supplierName: supplierNameCtrl.text.trim(),
                         supplierMobile: rawPhone(supplierMobileCtrl.text.trim()),
                       );
