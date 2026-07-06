@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/constants.dart';
 import '../store/store.dart';
 
@@ -207,4 +208,135 @@ String banglaToEnglish(String s) {
     final i = b.indexOf(c);
     return i >= 0 ? e[i] : c;
   }).join();
+}
+
+// ============================================================
+// Text field with autocomplete suggestions
+// ============================================================
+class SuggestTextField extends StatefulWidget {
+  final TextEditingController controller;
+  final String hint;
+  final List<String> suggestions;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
+
+  const SuggestTextField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    this.suggestions = const [],
+    this.inputFormatters,
+    this.keyboardType,
+    this.onChanged,
+  });
+
+  @override
+  State<SuggestTextField> createState() => _SuggestTextFieldState();
+}
+
+class _SuggestTextFieldState extends State<SuggestTextField> {
+  final _focusNode = FocusNode();
+  String _text = '';
+
+  List<String> get _filtered {
+    if (_text.isEmpty) return [];
+    final q = banglaToEnglish(_text.toLowerCase().trim());
+    return widget.suggestions
+        .where((s) => s.isNotEmpty && banglaToEnglish(s.toLowerCase()).contains(q))
+        .take(6)
+        .toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _text = widget.controller.text;
+    widget.controller.addListener(_onCtrlChanged);
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  void _onCtrlChanged() {
+    if (_text != widget.controller.text) {
+      setState(() => _text = widget.controller.text);
+    }
+  }
+
+  void _onFocusChanged() {
+    if (!_focusNode.hasFocus) {
+      setState(() => _text = widget.controller.text);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onCtrlChanged);
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          keyboardType: widget.keyboardType,
+          inputFormatters: widget.inputFormatters,
+          style: const TextStyle(color: kInk, fontSize: 15),
+          decoration: fieldDeco(widget.hint),
+          onChanged: (v) {
+            setState(() => _text = v);
+            widget.onChanged?.call(v);
+          },
+        ),
+        if (_focusNode.hasFocus && _text.isNotEmpty && _filtered.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(color: Color(0x1A5A46B4), blurRadius: 14, offset: Offset(0, 6)),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _filtered.map((s) {
+                final isLast = _filtered.last == s;
+                return InkWell(
+                  onTap: () {
+                    widget.controller.text = s;
+                    widget.controller.selection = TextSelection.collapsed(offset: s.length);
+                    setState(() => _text = s);
+                    widget.onChanged?.call(s);
+                    _focusNode.unfocus();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      border: isLast ? null : const Border(bottom: BorderSide(color: Color(0xFFF1EEF8))),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.history, size: 16, color: Color(0xFFA7A2BC)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(s, style: const TextStyle(fontSize: 14, color: kInk)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+  }
 }

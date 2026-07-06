@@ -135,6 +135,18 @@ class AddTabState extends State<AddTab> {
   }
 
   List<Widget> _productForm() {
+    final supplierNames = Store.I.products
+        .map((p) => p.supplierName.trim())
+        .where((n) => n.isNotEmpty)
+        .toSet()
+        .toList();
+    final supplierMobiles = Store.I.products
+        .map((p) => rawPhone(p.supplierMobile))
+        .where((n) => n.isNotEmpty && n != '+88')
+        .map((n) => fmtPhone(n))
+        .toSet()
+        .toList();
+
     return [
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,21 +154,21 @@ class AddTabState extends State<AddTab> {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('সরবরাহকারীর নাম'),
-            TextField(
+            SuggestTextField(
                 controller: _pSupplierName,
-                style: const TextStyle(color: kInk, fontSize: 15),
-                decoration: fieldDeco('নাম দিন')),
+                hint: 'নাম দিন',
+                suggestions: supplierNames),
           ])),
           const SizedBox(width: 11),
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('সরবরাহকারীর মোবাইল'),
-            TextField(
+            SuggestTextField(
                 controller: _pSupplierMobile,
+                hint: 'মোবাইল নম্বর',
                 keyboardType: TextInputType.phone,
                 inputFormatters: [PhoneFormatter()],
-                style: const TextStyle(color: kInk, fontSize: 15),
-                decoration: fieldDeco('মোবাইল নম্বর')),
+                suggestions: supplierMobiles),
           ])),
         ],
       ),
@@ -246,6 +258,17 @@ class AddTabState extends State<AddTab> {
     final qty = double.tryParse(_sQty.text) ?? 0;
     final price = double.tryParse(_sPrice.text) ?? 0;
     final over = sel != null && qty > sel.qty;
+    final buyerNames = Store.I.sales
+        .map((s) => s.buyerName.trim())
+        .where((n) => n.isNotEmpty)
+        .toSet()
+        .toList();
+    final buyerMobiles = Store.I.sales
+        .map((s) => rawPhone(s.buyerMobile))
+        .where((n) => n.isNotEmpty && n != '+88')
+        .map((n) => fmtPhone(n))
+        .toSet()
+        .toList();
 
     return [
       Row(
@@ -254,21 +277,21 @@ class AddTabState extends State<AddTab> {
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('ক্রেতার নাম'),
-            TextField(
+            SuggestTextField(
                 controller: _sBuyerName,
-                style: const TextStyle(color: kInk, fontSize: 15),
-                decoration: fieldDeco('নাম দিন')),
+                hint: 'নাম দিন',
+                suggestions: buyerNames),
           ])),
           const SizedBox(width: 11),
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('ক্রেতার মোবাইল'),
-            TextField(
+            SuggestTextField(
                 controller: _sBuyerMobile,
+                hint: 'মোবাইল নম্বর',
                 keyboardType: TextInputType.phone,
                 inputFormatters: [PhoneFormatter()],
-                style: const TextStyle(color: kInk, fontSize: 15),
-                decoration: fieldDeco('মোবাইল নম্বর')),
+                suggestions: buyerMobiles),
           ])),
         ],
       ),

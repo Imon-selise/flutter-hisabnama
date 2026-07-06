@@ -259,19 +259,42 @@ void _showEditDialog(BuildContext context, Product p) {
                 const SizedBox(height: 12),
                 Row(children: [
                   Expanded(
-                    child: TextField(
-                      controller: supplierNameCtrl,
-                      decoration: const InputDecoration(labelText: 'সরবরাহকারীর নাম', border: OutlineInputBorder()),
-                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Padding(
+                        padding: EdgeInsets.only(left: 4, bottom: 6),
+                        child: Text('সরবরাহকারীর নাম',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF6A6580))),
+                      ),
+                      SuggestTextField(
+                          controller: supplierNameCtrl,
+                          hint: 'নাম দিন',
+                          suggestions: Store.I.products
+                              .map((p) => p.supplierName.trim())
+                              .where((n) => n.isNotEmpty)
+                              .toSet()
+                              .toList()),
+                    ]),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: TextField(
-                      controller: supplierMobileCtrl,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [PhoneFormatter()],
-                      decoration: const InputDecoration(labelText: 'সরবরাহকারীর মোবাইল', border: OutlineInputBorder()),
-                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Padding(
+                        padding: EdgeInsets.only(left: 4, bottom: 6),
+                        child: Text('সরবরাহকারীর মোবাইল',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF6A6580))),
+                      ),
+                      SuggestTextField(
+                          controller: supplierMobileCtrl,
+                          hint: 'মোবাইল নম্বর',
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [PhoneFormatter()],
+                          suggestions: Store.I.products
+                              .map((p) => rawPhone(p.supplierMobile))
+                              .where((n) => n.isNotEmpty && n != '+88')
+                              .map((n) => fmtPhone(n))
+                              .toSet()
+                              .toList()),
+                    ]),
                   ),
                 ]),
                 const SizedBox(height: 18),
