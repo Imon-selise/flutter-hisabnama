@@ -16,6 +16,7 @@ class ReportsTab extends StatefulWidget {
 class _ReportsTabState extends State<ReportsTab> {
   late DateTime start;
   late DateTime end;
+  String q = '';
 
   @override
   void initState() {
@@ -23,7 +24,16 @@ class _ReportsTabState extends State<ReportsTab> {
     final now = DateTime.now();
     start = DateTime(now.year, now.month, 1);
     end = now;
+    Store.I.addListener(_onStoreChanged);
   }
+
+  @override
+  void dispose() {
+    Store.I.removeListener(_onStoreChanged);
+    super.dispose();
+  }
+
+  void _onStoreChanged() => setState(() {});
 
   bool _inRange(String iso) {
     final t = DateTime.parse(iso);
@@ -44,180 +54,375 @@ class _ReportsTabState extends State<ReportsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: Store.I,
-      builder: (context, _) {
-        final s = Store.I;
-        final rSales = s.sales.where((x) => _inRange(x.date)).toList();
-        final rAdds = s.additions.where((a) => _inRange(a.date) && s.byId(a.productId) != null).toList();
-        final qtyAdded = rAdds.fold(0.0, (a, x) => a + x.qty);
-        final qtySold = rSales.fold(0.0, (a, x) => a + x.qty);
-        final revenue = rSales.fold(0.0, (a, x) => a + x.qty * x.price);
-        final cogs = rSales.fold(0.0, (a, x) => a + x.qty * x.cost);
-        final profit = revenue - cogs;
-        final pos = profit >= 0;
+    final s = Store.I;
+    final rSales = s.sales.where((x) => _inRange(x.date)).toList();
+    final rAdds = s.additions.where((a) => _inRange(a.date) && s.byId(a.productId) != null).toList();
+    final qtyAdded = rAdds.fold(0.0, (a, x) => a + x.qty);
+    final qtySold = rSales.fold(0.0, (a, x) => a + x.qty);
+    final revenue = rSales.fold(0.0, (a, x) => a + x.qty * x.price);
+    final cogs = rSales.fold(0.0, (a, x) => a + x.qty * x.cost);
+    final profit = revenue - cogs;
+    final pos = profit >= 0;
 
-        // breakdown
-        final map = <String, List<double>>{}; // [qty, rev, profit]
-        final names = <String, String>{};
-        for (final x in rSales) {
-          map.putIfAbsent(x.productId, () => [0, 0, 0]);
-          names[x.productId] = x.name;
-          map[x.productId]![0] += x.qty;
-          map[x.productId]![1] += x.qty * x.price;
-          map[x.productId]![2] += (x.price - x.cost) * x.qty;
-        }
-        final breakdown = map.entries.toList()..sort((a, b) => b.value[1].compareTo(a.value[1]));
+    // breakdown
+    final map = <String, List<double>>{}; // [qty, rev, profit]
+    final names = <String, String>{};
+    for (final x in rSales) {
+      map.putIfAbsent(x.productId, () => [0, 0, 0]);
+      names[x.productId] = x.name;
+      map[x.productId]![0] += x.qty;
+      map[x.productId]![1] += x.qty * x.price;
+      map[x.productId]![2] += (x.price - x.cost) * x.qty;
+    }
+    final breakdown = map.entries
+        .where((e) => q.isEmpty || names[e.key]?.toLowerCase().contains(q.toLowerCase()) == true)
+        .toList()
+      ..sort((a, b) => b.value[1].compareTo(a.value[1]));
 
-        final cards = [
-          ['মোট পণ্য', '${bn(numStr(qtyAdded))} টি'],
-          ['মোট বিক্রিত পণ্য', '${bn(numStr(qtySold))} টি'],
-          ['মোট আয়', taka(revenue)],
-          ['বিক্রিত পণ্যের খরচ', taka(cogs)],
-          ['অবশিষ্ট স্টক মূল্য', taka(s.totalStockValue)],
-          ['লেনদেন', '${bn(rSales.length)} টি'],
-        ];
+    // ---- supplier-wise ----
+    final supplierSet = <String, Set<String>>{};
+    final supplierMobile = <String, String>{};
+    for (final p in s.products) {
+      if (p.supplierName.isNotEmpty) {
+        supplierSet.putIfAbsent(p.supplierName, () => {});
+        supplierMobile[p.supplierName] = p.supplierMobile;
+      }
+    }
+    for (final a in rAdds) {
+      final p = s.byId(a.productId);
+      if (p != null && p.supplierName.isNotEmpty) {
+        supplierSet.putIfAbsent(p.supplierName, () => {});
+        supplierSet[p.supplierName]!.add(p.id);
+      }
+    }
+    final supplierList = supplierSet.entries
+        .where((e) => q.isEmpty || e.key.toLowerCase().contains(q.toLowerCase()))
+        .toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
 
-        final barMax = max(1.0, [revenue, cogs, profit.abs()].reduce(max));
+    // ---- buyer-wise ----
+    final buyerMap = <String, List<double>>{}; // [count, total, profit]
+    final buyerMobile = <String, String>{};
+    for (final x in rSales) {
+      if (x.buyerName.isNotEmpty) {
+        buyerMap.putIfAbsent(x.buyerName, () => [0, 0, 0]);
+        buyerMap[x.buyerName]![0] += 1;
+        buyerMap[x.buyerName]![1] += x.qty * x.price;
+        buyerMap[x.buyerName]![2] += (x.price - x.cost) * x.qty;
+        buyerMobile[x.buyerName] = x.buyerMobile;
+      }
+    }
+    final buyerList = buyerMap.entries.where((e) => q.isEmpty || e.key.toLowerCase().contains(q.toLowerCase())).toList()
+      ..sort((a, b) => b.value[1].compareTo(a.value[1]));
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          children: [
-            // date range
-            Container(
-              decoration: cardDeco,
-              padding: const EdgeInsets.all(14),
-              child: Row(children: [
-                Expanded(child: _dateBtn('শুরুর তারিখ', start, () => _pick(true))),
-                const SizedBox(width: 10),
-                Expanded(child: _dateBtn('শেষ তারিখ', end, () => _pick(false))),
-              ]),
+    // ---- filtered sales for transactions ----
+    final filteredSales = rSales
+        .where((x) =>
+            q.isEmpty ||
+            x.name.toLowerCase().contains(q.toLowerCase()) ||
+            x.buyerName.toLowerCase().contains(q.toLowerCase()))
+        .toList();
+
+    // ---- supplier name lookup ----
+    final prodSupplier = <String, String>{};
+    for (final p in s.products) {
+      if (p.supplierName.isNotEmpty) prodSupplier[p.id] = p.supplierName;
+    }
+
+    final cards = [
+      ['মোট পণ্য', '${bn(numStr(qtyAdded))} টি'],
+      ['মোট বিক্রিত পণ্য', '${bn(numStr(qtySold))} টি'],
+      ['মোট আয়', taka(revenue)],
+      ['বিক্রিত পণ্যের খরচ', taka(cogs)],
+      ['অবশিষ্ট স্টক মূল্য', taka(s.totalStockValue)],
+      ['লেনদেন', '${bn(rSales.length)} টি'],
+    ];
+
+    final barMax = max(1.0, [revenue, cogs, profit.abs()].reduce(max));
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      children: [
+        // search
+        SearchBox(
+          key: const ValueKey('report_search'),
+          hint: 'পণ্য / সরবরাহকারী / ক্রেতার নামে খুঁজুন...',
+          onChanged: (v) => setState(() => q = v),
+          suggestions: [
+            ...s.products.map((p) => p.name),
+            ...s.products.map((p) => p.supplierName).where((n) => n.isNotEmpty),
+            ...s.sales.map((x) => x.buyerName).where((n) => n.isNotEmpty),
+          ].toSet().toList(),
+        ),
+        const SizedBox(height: 13),
+        // date range
+        Container(
+          decoration: cardDeco,
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            Expanded(child: _dateBtn('শুরুর তারিখ', start, () => _pick(true))),
+            const SizedBox(width: 10),
+            Expanded(child: _dateBtn('শেষ তারিখ', end, () => _pick(false))),
+          ]),
+        ),
+        const SizedBox(height: 13),
+        // hero
+        Container(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: pos ? const [Color(0xFF3FCB87), kGreen] : const [Color(0xFFF0686C), kRed],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(height: 13),
-            // hero
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: pos ? const [Color(0xFF3FCB87), kGreen] : const [Color(0xFFF0686C), kRed],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(color: (pos ? kGreen : kRed).withOpacity(.28), blurRadius: 20, offset: const Offset(0, 8))
-                ],
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(pos ? 'মোট লাভ' : 'মোট ক্ষতি',
-                    style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(.85), fontWeight: FontWeight.w500)),
-                const SizedBox(height: 4),
-                Text('${pos ? '' : '−'}${taka(profit.abs())}',
-                    style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: Colors.white)),
-                const SizedBox(height: 3),
-                Text('আয় ${taka(revenue)} − খরচ ${taka(cogs)}',
-                    style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(.8))),
-              ]),
-            ),
-            const SizedBox(height: 13),
-            // result cards
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 11,
-              mainAxisSpacing: 11,
-              childAspectRatio: 2.1,
-              children: cards
-                  .map((c) => Container(
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x0F5A46B4), blurRadius: 10, offset: Offset(0, 2))
-                            ]),
-                        padding: const EdgeInsets.all(13),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(c[0],
-                                  style: const TextStyle(fontSize: 11.5, color: kMute, fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 4),
-                              FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(c[1],
-                                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: kInk))),
-                            ]),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 13),
-            // bar chart
-            Container(
-              decoration: cardDeco,
-              padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('আয় · খরচ · লাভ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk)),
-                const SizedBox(height: 6),
-                SizedBox(
-                  height: 150,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _bar('আয়', revenue, barMax, kHeaderGradient),
-                      _bar('খরচ', cogs, barMax, const LinearGradient(colors: [Color(0xFFF0A04B), kOrange])),
-                      _bar(
-                          'লাভ',
-                          profit.abs(),
-                          barMax,
-                          LinearGradient(
-                              colors: pos ? const [Color(0xFF3FCB87), kGreen] : const [Color(0xFFF0686C), kRed])),
-                    ],
-                  ),
-                ),
-              ]),
-            ),
-            const SizedBox(height: 16),
-            const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 4),
-                child: Text('পণ্যভিত্তিক হিসাব',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk))),
-            if (rSales.isEmpty)
-              const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child:
-                      Center(child: Text('এই সময়ে কোনো বিক্রয় নেই', style: TextStyle(color: kMute, fontSize: 13.5))))
-            else
-              ...breakdown.map((e) {
-                final qtyV = e.value[0], revV = e.value[1], profV = e.value[2];
-                final p = profV >= 0;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
-                  child: Container(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(color: (pos ? kGreen : kRed).withOpacity(.28), blurRadius: 20, offset: const Offset(0, 8))
+            ],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(pos ? 'মোট লাভ' : 'মোট ক্ষতি',
+                style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(.85), fontWeight: FontWeight.w500)),
+            const SizedBox(height: 4),
+            Text('${pos ? '' : '−'}${taka(profit.abs())}',
+                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: Colors.white)),
+            const SizedBox(height: 3),
+            Text('আয় ${taka(revenue)} − খরচ ${taka(cogs)}',
+                style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(.8))),
+          ]),
+        ),
+        const SizedBox(height: 13),
+        // result cards
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 11,
+          mainAxisSpacing: 11,
+          childAspectRatio: 2.1,
+          children: cards
+              .map((c) => Container(
                     decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: const [BoxShadow(color: Color(0x0F5A46B4), blurRadius: 10, offset: Offset(0, 2))]),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(names[e.key] ?? '',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
-                        const SizedBox(height: 2),
-                        Text('বিক্রি ${bn(numStr(qtyV))} · আয় ${taka(revV)}',
-                            style: const TextStyle(fontSize: 11.5, color: kMute)),
+                    padding: const EdgeInsets.all(13),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(c[0], style: const TextStyle(fontSize: 11.5, color: kMute, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(c[1],
+                                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: kInk))),
+                        ]),
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 13),
+        // bar chart
+        Container(
+          decoration: cardDeco,
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('আয় · খরচ · লাভ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk)),
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 150,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _bar('আয়', revenue, barMax, kHeaderGradient),
+                  _bar('খরচ', cogs, barMax, const LinearGradient(colors: [Color(0xFFF0A04B), kOrange])),
+                  _bar(
+                      'লাভ',
+                      profit.abs(),
+                      barMax,
+                      LinearGradient(
+                          colors: pos ? const [Color(0xFF3FCB87), kGreen] : const [Color(0xFFF0686C), kRed])),
+                ],
+              ),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        // ---- product breakdown (enhanced) ----
+        const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 4),
+            child: Text('পণ্যভিত্তিক হিসাব', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk))),
+        if (rSales.isEmpty)
+          const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: Text('এই সময়ে কোনো বিক্রয় নেই', style: TextStyle(color: kMute, fontSize: 13.5))))
+        else
+          ...breakdown.map((e) {
+            final qtyV = e.value[0], revV = e.value[1], profV = e.value[2];
+            final p = profV >= 0;
+            final supName = prodSupplier[e.key] ?? '';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: const [BoxShadow(color: Color(0x0F5A46B4), blurRadius: 10, offset: Offset(0, 2))]),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(names[e.key] ?? '',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
+                    if (supName.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('🏷️ $supName',
+                            style: const TextStyle(fontSize: 11, color: kMute, fontWeight: FontWeight.w500)),
+                      ),
+                    const SizedBox(height: 2),
+                    Text('বিক্রি ${bn(numStr(qtyV))} · আয় ${taka(revV)}',
+                        style: const TextStyle(fontSize: 11.5, color: kMute)),
+                  ]),
+                  Text('${p ? '+' : '−'}${taka(profV.abs())}',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p ? kGreen : kRed)),
+                ]),
+              ),
+            );
+          }),
+        const SizedBox(height: 16),
+        // ---- supplier-wise ----
+        if (supplierList.isNotEmpty) ...[
+          const Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 4),
+              child: Text('সরবরাহকারীভিত্তিক হিসাব',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk))),
+          ...supplierList.map((e) {
+            final supName = e.key;
+            final prodCount = e.value.length;
+            final mobile = supplierMobile[supName] ?? '';
+            final stockValue = e.value.fold(0.0, (sum, pid) {
+              final prod = s.byId(pid);
+              return sum + (prod?.qty ?? 0) * (prod?.cost ?? 0);
+            });
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: const [BoxShadow(color: Color(0x0F5A46B4), blurRadius: 10, offset: Offset(0, 2))]),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(children: [
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(supName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
+                      if (mobile.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Text(mobile, style: const TextStyle(fontSize: 11, color: kMute, fontWeight: FontWeight.w500)),
+                      ],
+                    ]),
+                    const SizedBox(height: 2),
+                    Text('${bn(prodCount.toString())} টি পণ্য · স্টক মূল্য ${taka(stockValue)}',
+                        style: const TextStyle(fontSize: 11.5, color: kMute)),
+                  ]),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 16),
+        ],
+        // ---- buyer-wise ----
+        if (buyerList.isNotEmpty) ...[
+          const Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 4),
+              child: Text('ক্রেতাভিত্তিক হিসাব',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk))),
+          ...buyerList.map((e) {
+            final buyerName = e.key;
+            final count = e.value[0].toInt();
+            final total = e.value[1];
+            final prof = e.value[2];
+            final pp = prof >= 0;
+            final mobile = buyerMobile[buyerName] ?? '';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: const [BoxShadow(color: Color(0x0F5A46B4), blurRadius: 10, offset: Offset(0, 2))]),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(buyerName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
+                        if (mobile.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Text(fmtPhone(mobile),
+                              style: const TextStyle(fontSize: 11, color: kMute, fontWeight: FontWeight.w500)),
+                        ],
                       ]),
-                      Text('${p ? '+' : '−'}${taka(profV.abs())}',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p ? kGreen : kRed)),
+                      const SizedBox(height: 2),
+                      Text('${bn(count.toString())} বার · মোট ${taka(total)}',
+                          style: const TextStyle(fontSize: 11.5, color: kMute)),
                     ]),
                   ),
-                );
-              }),
-          ],
-        );
-      },
+                  Text('${pp ? '+' : '−'}${taka(prof.abs())}',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: pp ? kGreen : kRed)),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 16),
+        ],
+        // ---- sale transactions ----
+        if (filteredSales.isNotEmpty) ...[
+          const Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 4),
+              child: Text('বিক্রয় লেনদেন', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kInk))),
+          ...filteredSales.map((x) {
+            final total = x.qty * x.price;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: const [BoxShadow(color: Color(0x0F5A46B4), blurRadius: 10, offset: Offset(0, 2))]),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text(x.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: kInk)),
+                    Text(taka(total),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kPrimary)),
+                  ]),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Text(fmtDate(DateTime.parse(x.date)), style: const TextStyle(fontSize: 11, color: kMute)),
+                    const SizedBox(width: 10),
+                    Text('${bn(numStr(x.qty))} টি', style: const TextStyle(fontSize: 11, color: kMute)),
+                  ]),
+                  if (x.buyerName.isNotEmpty || x.buyerMobile.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      if (x.buyerName.isNotEmpty)
+                        Text(x.buyerName,
+                            style: const TextStyle(fontSize: 12, color: kSubInk, fontWeight: FontWeight.w500)),
+                      if (x.buyerName.isNotEmpty && x.buyerMobile.isNotEmpty)
+                        const Text('  ·  ', style: TextStyle(fontSize: 12, color: Color(0xFFC9C4DA))),
+                      if (x.buyerMobile.isNotEmpty)
+                        Text(fmtPhone(x.buyerMobile),
+                            style: const TextStyle(fontSize: 12, color: kSubInk, fontWeight: FontWeight.w500)),
+                    ]),
+                  ],
+                ]),
+              ),
+            );
+          }),
+        ],
+      ],
     );
   }
 

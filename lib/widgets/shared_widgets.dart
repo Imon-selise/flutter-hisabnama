@@ -98,6 +98,7 @@ class _SearchBoxState extends State<SearchBox> {
   final _ctrl = TextEditingController();
   final _focusNode = FocusNode();
   String _text = '';
+  bool _suppressChange = false;
 
   List<String> get _filtered {
     if (_text.isEmpty) return [];
@@ -106,7 +107,18 @@ class _SearchBoxState extends State<SearchBox> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  void _onFocusChanged() {
+    if (!_focusNode.hasFocus) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
     _ctrl.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -121,11 +133,11 @@ class _SearchBoxState extends State<SearchBox> {
           controller: _ctrl,
           focusNode: _focusNode,
           onChanged: (v) {
-            setState(() => _text = v);
-            widget.onChanged(v);
+            _text = v;
+            if (!_suppressChange) widget.onChanged(v);
+            setState(() {});
           },
           onSubmitted: (v) {
-            setState(() => _text = v);
             widget.onChanged(v);
             _focusNode.unfocus();
           },
@@ -139,7 +151,7 @@ class _SearchBoxState extends State<SearchBox> {
                     icon: const Icon(Icons.close, size: 18, color: Color(0xFFA7A2BC)),
                     onPressed: () {
                       _ctrl.clear();
-                      setState(() => _text = '');
+                      _text = '';
                       widget.onChanged('');
                       _focusNode.unfocus();
                     },
@@ -154,7 +166,7 @@ class _SearchBoxState extends State<SearchBox> {
                 borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kPrimary, width: 1.5)),
           ),
         ),
-        if (_text.isNotEmpty && _filtered.isNotEmpty)
+        if (_text.isNotEmpty && _filtered.isNotEmpty && _focusNode.hasFocus)
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
@@ -171,10 +183,13 @@ class _SearchBoxState extends State<SearchBox> {
                 final isLast = _filtered.last == s;
                 return InkWell(
                   onTap: () {
+                    _suppressChange = true;
                     _ctrl.text = s;
-                    setState(() => _text = s);
-                    widget.onChanged(s);
+                    _ctrl.selection = TextSelection.collapsed(offset: s.length);
+                    _text = s;
+                    _suppressChange = false;
                     _focusNode.unfocus();
+                    widget.onChanged(s);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
