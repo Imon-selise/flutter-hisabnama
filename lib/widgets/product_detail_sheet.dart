@@ -278,8 +278,12 @@ void _showEditDialog(BuildContext context, Product p) {
                           controller: supplierNameCtrl,
                           hint: 'নাম দিন',
                           suggestions: Store.I.products
-                              .map((p) => p.supplierName.trim())
-                              .where((n) => n.isNotEmpty)
+                              .map((p) {
+                                final n = p.supplierName.trim();
+                                final m = fmtPhone(rawPhone(p.supplierMobile));
+                                return n.isNotEmpty ? (m != '+88' ? '$n · $m' : n) : '';
+                              })
+                              .where((s) => s.isNotEmpty)
                               .toSet()
                               .toList()),
                     ]),
@@ -298,9 +302,12 @@ void _showEditDialog(BuildContext context, Product p) {
                           keyboardType: TextInputType.phone,
                           inputFormatters: [PhoneFormatter()],
                           suggestions: Store.I.products
-                              .map((p) => rawPhone(p.supplierMobile))
-                              .where((n) => n.isNotEmpty && n != '+88')
-                              .map((n) => fmtPhone(n))
+                              .map((p) {
+                                final n = p.supplierName.trim();
+                                final m = fmtPhone(rawPhone(p.supplierMobile));
+                                return m != '+88' ? '$m · $n' : '';
+                              })
+                              .where((s) => s.isNotEmpty)
                               .toSet()
                               .toList()),
                     ]),

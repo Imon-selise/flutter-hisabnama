@@ -257,8 +257,14 @@ class _SuggestTextFieldState extends State<SuggestTextField> {
   List<String> get _filtered {
     if (_text.isEmpty) return [];
     final q = banglaToEnglish(_text.toLowerCase().trim());
+    if (q.isEmpty) return [];
     return widget.suggestions
-        .where((s) => s.isNotEmpty && banglaToEnglish(s.toLowerCase()).contains(q))
+        .where((s) {
+          if (s.isEmpty) return false;
+          final lower = banglaToEnglish(s.toLowerCase());
+          // match full text or any part split by ·
+          return lower.contains(q) || lower.split('·').any((part) => part.trim().contains(q));
+        })
         .take(6)
         .toList();
   }
@@ -328,9 +334,9 @@ class _SuggestTextFieldState extends State<SuggestTextField> {
                   onTap: () {
                     widget.controller.text = s;
                     widget.controller.selection = TextSelection.collapsed(offset: s.length);
-                    setState(() => _text = s);
-                    widget.onChanged?.call(s);
+                    _text = s;
                     _focusNode.unfocus();
+                    widget.onChanged?.call(s);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),

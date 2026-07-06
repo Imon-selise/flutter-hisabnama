@@ -171,14 +171,30 @@ class AddTabState extends State<AddTab> {
   }
 
   List<Widget> _productForm() {
-    final supplierNames =
-        Store.I.products.map((p) => p.supplierName.trim()).where((n) => n.isNotEmpty).toSet().toList();
-    final supplierMobiles = Store.I.products
-        .map((p) => rawPhone(p.supplierMobile))
-        .where((n) => n.isNotEmpty && n != '+88')
-        .map((n) => fmtPhone(n))
-        .toSet()
-        .toList();
+    // build shared name pool (suppliers + buyers)
+    final seen = <String>{};
+    final nameList = <String>[];
+    final mobileList = <String>[];
+    final nameToMobile = <String, String>{};
+    final mobileToName = <String, String>{};
+    void addPerson(String n, String raw) {
+      if (n.isEmpty) return;
+      final mob = fmtPhone(raw);
+      final key = '$n|$raw';
+      if (seen.contains(key)) return;
+      seen.add(key);
+      nameToMobile[n] = raw;
+      if (raw.isNotEmpty && raw != '+88') mobileToName[mob] = n;
+      nameList.add(mob != '+88' ? '$n · $mob' : n);
+      if (raw.isNotEmpty && raw != '+88') mobileList.add('$mob · $n');
+    }
+
+    for (final p in Store.I.products) {
+      addPerson(p.supplierName.trim(), rawPhone(p.supplierMobile));
+    }
+    for (final x in Store.I.sales) {
+      addPerson(x.buyerName.trim(), rawPhone(x.buyerMobile));
+    }
 
     return [
       Row(
@@ -190,8 +206,15 @@ class AddTabState extends State<AddTab> {
             SuggestTextField(
                 controller: _pSupplierName,
                 hint: 'নাম দিন',
-                suggestions: supplierNames,
-                onChanged: (_) => setState(() {})),
+                suggestions: nameList,
+                onChanged: (v) {
+                  final name = v.contains(' · ') ? v.split(' · ').first.trim() : v;
+                  _pSupplierName.text = name;
+                  final clean = name.trim();
+                  final m = nameToMobile[clean];
+                  if (m != null && m != '+88') _pSupplierMobile.text = fmtPhone(m);
+                  setState(() {});
+                }),
           ])),
           const SizedBox(width: 11),
           Expanded(
@@ -199,11 +222,18 @@ class AddTabState extends State<AddTab> {
             fieldLabel('সরবরাহকারীর মোবাইল'),
             SuggestTextField(
                 controller: _pSupplierMobile,
-                onChanged: (_) => setState(() {}),
+                onChanged: (v) {
+                  final mob = v.contains(' · ') ? v.split(' · ').first.trim() : v;
+                  _pSupplierMobile.text = mob;
+                  final clean = mob.trim();
+                  final n = mobileToName[clean];
+                  if (n != null && n.isNotEmpty) _pSupplierName.text = n;
+                  setState(() {});
+                },
                 hint: 'মোবাইল নম্বর',
                 keyboardType: TextInputType.phone,
                 inputFormatters: [PhoneFormatter()],
-                suggestions: supplierMobiles),
+                suggestions: mobileList),
           ])),
         ],
       ),
@@ -300,13 +330,30 @@ class AddTabState extends State<AddTab> {
     final qty = double.tryParse(_sQty.text) ?? 0;
     final price = double.tryParse(_sPrice.text) ?? 0;
     final over = sel != null && qty > sel.qty;
-    final buyerNames = Store.I.sales.map((s) => s.buyerName.trim()).where((n) => n.isNotEmpty).toSet().toList();
-    final buyerMobiles = Store.I.sales
-        .map((s) => rawPhone(s.buyerMobile))
-        .where((n) => n.isNotEmpty && n != '+88')
-        .map((n) => fmtPhone(n))
-        .toSet()
-        .toList();
+    // build shared name pool (buyers + suppliers)
+    final seen = <String>{};
+    final nameList = <String>[];
+    final mobileList = <String>[];
+    final nameToMobile = <String, String>{};
+    final mobileToName = <String, String>{};
+    void addPerson(String n, String raw) {
+      if (n.isEmpty) return;
+      final mob = fmtPhone(raw);
+      final key = '$n|$raw';
+      if (seen.contains(key)) return;
+      seen.add(key);
+      nameToMobile[n] = raw;
+      if (raw.isNotEmpty && raw != '+88') mobileToName[mob] = n;
+      nameList.add(mob != '+88' ? '$n · $mob' : n);
+      if (raw.isNotEmpty && raw != '+88') mobileList.add('$mob · $n');
+    }
+
+    for (final x in Store.I.sales) {
+      addPerson(x.buyerName.trim(), rawPhone(x.buyerMobile));
+    }
+    for (final p in Store.I.products) {
+      addPerson(p.supplierName.trim(), rawPhone(p.supplierMobile));
+    }
 
     return [
       Row(
@@ -316,7 +363,17 @@ class AddTabState extends State<AddTab> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             fieldLabel('ক্রেতার নাম'),
             SuggestTextField(
-                controller: _sBuyerName, hint: 'নাম দিন', suggestions: buyerNames, onChanged: (_) => setState(() {})),
+                controller: _sBuyerName,
+                hint: 'নাম দিন',
+                suggestions: nameList,
+                onChanged: (v) {
+                  final name = v.contains(' · ') ? v.split(' · ').first.trim() : v;
+                  _sBuyerName.text = name;
+                  final clean = name.trim();
+                  final raw = nameToMobile[clean];
+                  if (raw != null && raw != '+88') _sBuyerMobile.text = fmtPhone(raw);
+                  setState(() {});
+                }),
           ])),
           const SizedBox(width: 11),
           Expanded(
@@ -327,8 +384,15 @@ class AddTabState extends State<AddTab> {
                 hint: 'মোবাইল নম্বর',
                 keyboardType: TextInputType.phone,
                 inputFormatters: [PhoneFormatter()],
-                suggestions: buyerMobiles,
-                onChanged: (_) => setState(() {})),
+                suggestions: mobileList,
+                onChanged: (v) {
+                  final mob = v.contains(' · ') ? v.split(' · ').first.trim() : v;
+                  _sBuyerMobile.text = mob;
+                  final clean = mob.trim();
+                  final n = mobileToName[clean];
+                  if (n != null && n.isNotEmpty) _sBuyerName.text = n;
+                  setState(() {});
+                }),
           ])),
         ],
       ),
