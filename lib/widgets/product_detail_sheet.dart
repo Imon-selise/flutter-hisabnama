@@ -88,9 +88,12 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
                 _row('ক্রয় মূল্য', taka(p.cost), border: true),
                 _row('বিক্রয় মূল্য', taka(p.price), border: true),
                 if (p.supplierName.isNotEmpty || p.supplierMobile.isNotEmpty) ...[
-                  _row('সরবরাহকারী',
-                      [if (p.supplierName.isNotEmpty) p.supplierName, if (p.supplierMobile.isNotEmpty) fmtPhone(p.supplierMobile)]
-                          .join(' · ')),
+                  _row(
+                      'সরবরাহকারী',
+                      [
+                        if (p.supplierName.isNotEmpty) p.supplierName,
+                        if (p.supplierMobile.isNotEmpty) fmtPhone(p.supplierMobile)
+                      ].join(' · ')),
                 ],
               ]),
             ),
@@ -182,7 +185,8 @@ void _showEditDialog(BuildContext context, Product p) {
   final priceCtrl =
       TextEditingController(text: p.price == p.price.roundToDouble() ? p.price.round().toString() : p.price.toString());
   final supplierNameCtrl = TextEditingController(text: p.supplierName);
-  final supplierMobileCtrl = TextEditingController(text: p.supplierMobile.isNotEmpty ? fmtPhone(p.supplierMobile) : '+88');
+  final supplierMobileCtrl =
+      TextEditingController(text: p.supplierMobile.isNotEmpty ? fmtPhone(p.supplierMobile) : '+88');
   String unit = p.unit;
 
   showModalBottomSheet(
@@ -266,8 +270,7 @@ void _showEditDialog(BuildContext context, Product p) {
                       controller: supplierMobileCtrl,
                       keyboardType: TextInputType.phone,
                       inputFormatters: [PhoneFormatter()],
-                      decoration:
-                          const InputDecoration(labelText: 'সরবরাহকারীর মোবাইল', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(labelText: 'সরবরাহকারীর মোবাইল', border: OutlineInputBorder()),
                     ),
                   ),
                 ]),

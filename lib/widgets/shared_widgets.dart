@@ -101,10 +101,7 @@ class _SearchBoxState extends State<SearchBox> {
   List<String> get _filtered {
     if (_text.isEmpty) return [];
     final q = banglaToEnglish(_text.toLowerCase());
-    return widget.suggestions
-        .where((s) => banglaToEnglish(s.toLowerCase()).contains(q))
-        .take(6)
-        .toList();
+    return widget.suggestions.where((s) => banglaToEnglish(s.toLowerCase()).contains(q)).take(6).toList();
   }
 
   @override

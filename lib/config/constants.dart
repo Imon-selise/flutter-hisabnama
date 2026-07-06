@@ -100,9 +100,7 @@ class PhoneFormatter extends TextInputFormatter {
     // Extract only digits
     final cleaned = v.text.replaceAll(RegExp(r'[^\d]'), '');
     // Separate the mandatory 88 prefix from user digits
-    final userDigits = cleaned.startsWith('88') && cleaned.length >= 2
-        ? cleaned.substring(2)
-        : cleaned;
+    final userDigits = cleaned.startsWith('88') && cleaned.length >= 2 ? cleaned.substring(2) : cleaned;
     // Cap user input to 11 digits
     final capped = userDigits.length > 11 ? userDigits.substring(0, 11) : userDigits;
     final digits = '88$capped';

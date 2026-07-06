@@ -26,7 +26,8 @@ class _InventoryTabState extends State<InventoryTab> {
         .toList();
 
     final suggestions = s.products
-        .map((p) => [p.name, if (p.supplierName.isNotEmpty) p.supplierName, if (p.supplierMobile.isNotEmpty) p.supplierMobile])
+        .map((p) =>
+            [p.name, if (p.supplierName.isNotEmpty) p.supplierName, if (p.supplierMobile.isNotEmpty) p.supplierMobile])
         .expand((x) => x)
         .toSet()
         .toList();
