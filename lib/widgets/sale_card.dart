@@ -61,6 +61,40 @@ class SaleCard extends StatelessWidget {
           ),
           const Padding(
               padding: EdgeInsets.symmetric(vertical: 11), child: Divider(height: 1, color: Color(0xFFF1EEF8))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF5E7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.person_outline, size: 13, color: Color(0xFFB8862D)),
+                const SizedBox(width: 5),
+                Text(
+                  s.buyerName.isNotEmpty ? s.buyerName : 'ক্রেতা —',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: s.buyerName.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Icon(Icons.phone_outlined, size: 13, color: Color(0xFFB8862D)),
+                const SizedBox(width: 5),
+                Text(
+                  s.buyerMobile.isNotEmpty ? fmtPhone(s.buyerMobile) : '—',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: s.buyerMobile.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Row(children: [
             _col('পরিমাণ', bn(numStr(s.qty))),
             _divider(),

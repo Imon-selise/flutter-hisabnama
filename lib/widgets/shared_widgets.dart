@@ -81,30 +81,133 @@ Widget avatar(String name, int tintI, {double size = 52, double radius = 14, dou
     );
 
 // ============================================================
-// Search box
+// Search box with autocomplete suggestions
 // ============================================================
-class SearchBox extends StatelessWidget {
+class SearchBox extends StatefulWidget {
   final String hint;
   final ValueChanged<String> onChanged;
-  const SearchBox({super.key, required this.hint, required this.onChanged});
+  final List<String> suggestions;
+  const SearchBox({super.key, required this.hint, required this.onChanged, this.suggestions = const []});
+
+  @override
+  State<SearchBox> createState() => _SearchBoxState();
+}
+
+class _SearchBoxState extends State<SearchBox> {
+  final _ctrl = TextEditingController();
+  final _focusNode = FocusNode();
+  String _text = '';
+
+  List<String> get _filtered {
+    if (_text.isEmpty) return [];
+    final q = banglaToEnglish(_text.toLowerCase());
+    return widget.suggestions
+        .where((s) => banglaToEnglish(s.toLowerCase()).contains(q))
+        .take(6)
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      onChanged: onChanged,
-      style: const TextStyle(color: kInk, fontSize: 14.5),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFABA6C2), fontSize: 14.5),
-        prefixIcon: const Icon(Icons.search, color: Color(0xFFA7A2BC), size: 20),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 13),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kBorder, width: 1.5)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kPrimary, width: 1.5)),
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _ctrl,
+          focusNode: _focusNode,
+          onChanged: (v) {
+            setState(() => _text = v);
+            widget.onChanged(v);
+          },
+          onSubmitted: (v) {
+            setState(() => _text = v);
+            widget.onChanged(v);
+            _focusNode.unfocus();
+          },
+          style: const TextStyle(color: kInk, fontSize: 14.5),
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            hintStyle: const TextStyle(color: Color(0xFFABA6C2), fontSize: 14.5),
+            prefixIcon: const Icon(Icons.search, color: Color(0xFFA7A2BC), size: 20),
+            suffixIcon: _text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: Color(0xFFA7A2BC)),
+                    onPressed: () {
+                      _ctrl.clear();
+                      setState(() => _text = '');
+                      widget.onChanged('');
+                      _focusNode.unfocus();
+                    },
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(vertical: 13),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kBorder, width: 1.5)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kPrimary, width: 1.5)),
+          ),
+        ),
+        if (_text.isNotEmpty && _filtered.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(color: Color(0x1A5A46B4), blurRadius: 14, offset: Offset(0, 6)),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: _filtered.map((s) {
+                final isLast = _filtered.last == s;
+                return InkWell(
+                  onTap: () {
+                    _ctrl.text = s;
+                    setState(() => _text = s);
+                    widget.onChanged(s);
+                    _focusNode.unfocus();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      border: isLast ? null : const Border(bottom: BorderSide(color: Color(0xFFF1EEF8))),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, size: 16, color: Color(0xFFA7A2BC)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(s, style: const TextStyle(fontSize: 14, color: kInk)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
     );
   }
+}
+
+/// Convert Bangla digits to English for search matching
+String banglaToEnglish(String s) {
+  const b = '০১২৩৪৫৬৭৮৯';
+  const e = '0123456789';
+  return s.split('').map((c) {
+    final i = b.indexOf(c);
+    return i >= 0 ? e[i] : c;
+  }).join();
 }

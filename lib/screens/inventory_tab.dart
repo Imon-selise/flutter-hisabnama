@@ -21,12 +21,24 @@ class _InventoryTabState extends State<InventoryTab> {
   @override
   Widget build(BuildContext context) {
     final s = Store.I;
-    final list = s.products.where((p) => q.isEmpty || p.name.contains(q)).toList();
+    final list = s.products
+        .where((p) => q.isEmpty || p.name.contains(q) || p.supplierName.contains(q) || p.supplierMobile.contains(q))
+        .toList();
+
+    final suggestions = s.products
+        .map((p) => [p.name, if (p.supplierName.isNotEmpty) p.supplierName, if (p.supplierMobile.isNotEmpty) p.supplierMobile])
+        .expand((x) => x)
+        .toSet()
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       children: [
-        SearchBox(hint: 'পণ্য খুঁজুন...', onChanged: (v) => setState(() => q = v)),
+        SearchBox(
+          hint: 'পণ্য / সরবরাহকারীর নাম বা মোবাইল...',
+          onChanged: (v) => setState(() => q = v),
+          suggestions: suggestions,
+        ),
         const SizedBox(height: 14),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),

@@ -54,7 +54,8 @@ class Store extends ChangeNotifier {
   }
 
   // ---- mutations ----
-  void addProduct(String name, double qty, String unit, double cost, double price, DateTime date) {
+  void addProduct(String name, double qty, String unit, double cost, double price, DateTime date,
+      {String supplierName = '', String supplierMobile = ''}) {
     final id = _uid('p');
     final iso = date.toIso8601String();
     products.add(Product(
@@ -66,25 +67,31 @@ class Store extends ChangeNotifier {
       qty: qty,
       date: iso,
       tintI: products.length,
+      supplierName: supplierName,
+      supplierMobile: supplierMobile,
     ));
     additions.add(Addition(id: _uid('a'), productId: id, qty: qty, cost: cost, date: iso));
     _save();
     notifyListeners();
   }
 
-  void updateProduct(String id, String name, double qty, String unit, double cost, double price) {
+  void updateProduct(String id, String name, double qty, String unit, double cost, double price,
+      {String supplierName = '', String supplierMobile = ''}) {
     final p = products.firstWhere((p) => p.id == id);
     p.name = name;
     p.qty = qty;
     p.unit = unit;
     p.cost = cost;
     p.price = price;
+    p.supplierName = supplierName;
+    p.supplierMobile = supplierMobile;
     _save();
     notifyListeners();
   }
 
   /// returns true if sold more than stock (over-sell warning)
-  bool recordSale(Product p, double qty, double price, DateTime date) {
+  bool recordSale(Product p, double qty, double price, DateTime date,
+      {String buyerName = '', String buyerMobile = ''}) {
     final over = qty > p.qty;
     sales.add(Sale(
       id: _uid('s'),
@@ -94,6 +101,8 @@ class Store extends ChangeNotifier {
       price: price,
       cost: p.cost,
       date: date.toIso8601String(),
+      buyerName: buyerName,
+      buyerMobile: buyerMobile,
     ));
     p.qty -= qty;
     _save();

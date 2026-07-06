@@ -21,12 +21,16 @@ class AddTabState extends State<AddTab> {
   final _pQty = TextEditingController();
   final _pCost = TextEditingController();
   final _pPrice = TextEditingController();
+  final _pSupplierName = TextEditingController();
+  final _pSupplierMobile = TextEditingController(text: '+88');
   String _pUnit = 'কেজি';
   DateTime _pDate = DateTime.now();
   // sale form
   String? _sProductId;
   final _sQty = TextEditingController();
   final _sPrice = TextEditingController();
+  final _sBuyerName = TextEditingController();
+  final _sBuyerMobile = TextEditingController(text: '+88');
   DateTime _sDate = DateTime.now();
 
   void setMode(bool sale, {String? productId}) {
@@ -42,8 +46,12 @@ class AddTabState extends State<AddTab> {
     _pQty.dispose();
     _pCost.dispose();
     _pPrice.dispose();
+    _pSupplierName.dispose();
+    _pSupplierMobile.dispose();
     _sQty.dispose();
     _sPrice.dispose();
+    _sBuyerName.dispose();
+    _sBuyerMobile.dispose();
     super.dispose();
   }
 
@@ -71,12 +79,16 @@ class AddTabState extends State<AddTab> {
       double.tryParse(_pCost.text) ?? 0,
       double.tryParse(_pPrice.text) ?? 0,
       _pDate,
+      supplierName: _pSupplierName.text.trim(),
+      supplierMobile: rawPhone(_pSupplierMobile.text.trim()),
     );
     final name = _pName.text.trim();
     _pName.clear();
     _pQty.clear();
     _pCost.clear();
     _pPrice.clear();
+    _pSupplierName.clear();
+    _pSupplierMobile.text = '+88';
     setState(() => _pDate = DateTime.now());
     showToast(context, '$name যোগ হয়েছে', kGreen);
     widget.onDone(2);
@@ -94,9 +106,12 @@ class AddTabState extends State<AddTab> {
       showToast(context, 'পরিমাণ দিন', kOrange);
       return;
     }
-    final over = Store.I.recordSale(p, qty, price, _sDate);
+    final over = Store.I.recordSale(p, qty, price, _sDate,
+        buyerName: _sBuyerName.text.trim(), buyerMobile: rawPhone(_sBuyerMobile.text.trim()));
     _sQty.clear();
     _sPrice.clear();
+    _sBuyerName.clear();
+    _sBuyerMobile.text = '+88';
     setState(() {
       _sProductId = null;
       _sDate = DateTime.now();
@@ -121,6 +136,31 @@ class AddTabState extends State<AddTab> {
 
   List<Widget> _productForm() {
     return [
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            fieldLabel('সরবরাহকারীর নাম'),
+            TextField(
+                controller: _pSupplierName,
+                style: const TextStyle(color: kInk, fontSize: 15),
+                decoration: fieldDeco('নাম দিন')),
+          ])),
+          const SizedBox(width: 11),
+          Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            fieldLabel('সরবরাহকারীর মোবাইল'),
+            TextField(
+                controller: _pSupplierMobile,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [PhoneFormatter()],
+                style: const TextStyle(color: kInk, fontSize: 15),
+                decoration: fieldDeco('মোবাইল নম্বর')),
+          ])),
+        ],
+      ),
+      const SizedBox(height: 13),
       fieldLabel('পণ্যের নাম'),
       TextField(
           controller: _pName,
@@ -208,6 +248,31 @@ class AddTabState extends State<AddTab> {
     final over = sel != null && qty > sel.qty;
 
     return [
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            fieldLabel('ক্রেতার নাম'),
+            TextField(
+                controller: _sBuyerName,
+                style: const TextStyle(color: kInk, fontSize: 15),
+                decoration: fieldDeco('নাম দিন')),
+          ])),
+          const SizedBox(width: 11),
+          Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            fieldLabel('ক্রেতার মোবাইল'),
+            TextField(
+                controller: _sBuyerMobile,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [PhoneFormatter()],
+                style: const TextStyle(color: kInk, fontSize: 15),
+                decoration: fieldDeco('মোবাইল নম্বর')),
+          ])),
+        ],
+      ),
+      const SizedBox(height: 13),
       fieldLabel('পণ্য নির্বাচন করুন'),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),

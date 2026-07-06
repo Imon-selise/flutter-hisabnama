@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 // ============================================================
 // Palette
@@ -67,4 +68,58 @@ String fmtDate(DateTime d) => bn('${d.day.toString().padLeft(2, '0')}/${d.month.
 String numStr(num v) {
   if (v == v.roundToDouble()) return v.round().toString();
   return v.toString();
+}
+
+// ============================================================
+// Phone number helpers
+// ============================================================
+
+/// Format phone: +8801521325211 → +880 1521-325211
+String fmtPhone(String raw) {
+  if (raw.isEmpty) return '';
+  final digits = raw.replaceAll(RegExp(r'[^\d+]'), '');
+  String s = digits.startsWith('+') ? digits.substring(1) : digits;
+  if (!s.startsWith('880') && s.isNotEmpty) s = '880$s';
+  if (s.length <= 3) return '+$s';
+  final code = s.substring(0, 3);
+  final rest = s.substring(3);
+  if (rest.length <= 4) return '+$code $rest';
+  return '+$code ${rest.substring(0, 4)}-${rest.substring(4)}';
+}
+
+/// Strips formatting, returns raw like +8801521325211
+String rawPhone(String formatted) {
+  final d = formatted.replaceAll(RegExp(r'[^\d+]'), '');
+  if (d.startsWith('+')) return d;
+  return '+880$d';
+}
+
+class PhoneFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue old, TextEditingValue v) {
+    // Extract only digits
+    final cleaned = v.text.replaceAll(RegExp(r'[^\d]'), '');
+    // Separate the mandatory 88 prefix from user digits
+    final userDigits = cleaned.startsWith('88') && cleaned.length >= 2
+        ? cleaned.substring(2)
+        : cleaned;
+    // Cap user input to 11 digits
+    final capped = userDigits.length > 11 ? userDigits.substring(0, 11) : userDigits;
+    final digits = '88$capped';
+
+    if (digits.length <= 3) {
+      return TextEditingValue(text: '+$digits', selection: TextSelection.collapsed(offset: digits.length + 1));
+    }
+    final body = digits.substring(3);
+    if (body.isEmpty) {
+      return TextEditingValue(text: '+${digits.substring(0, 3)}', selection: const TextSelection.collapsed(offset: 4));
+    }
+    String formatted;
+    if (body.length <= 4) {
+      formatted = '+${digits.substring(0, 3)} $body';
+    } else {
+      formatted = '+${digits.substring(0, 3)} ${body.substring(0, 4)}-${body.substring(4)}';
+    }
+    return TextEditingValue(text: formatted, selection: TextSelection.collapsed(offset: formatted.length));
+  }
 }

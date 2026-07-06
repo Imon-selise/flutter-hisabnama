@@ -21,13 +21,25 @@ class _SalesTabState extends State<SalesTab> {
       listenable: Store.I,
       builder: (context, _) {
         final s = Store.I;
-        final list = s.sales.where((x) => q.isEmpty || x.name.contains(q)).toList()
+        final list = s.sales
+            .where((x) => q.isEmpty || x.name.contains(q) || x.buyerName.contains(q) || x.buyerMobile.contains(q))
+            .toList()
           ..sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+
+        final suggestions = s.sales
+            .map((x) => [x.name, if (x.buyerName.isNotEmpty) x.buyerName, if (x.buyerMobile.isNotEmpty) x.buyerMobile])
+            .expand((x) => x)
+            .toSet()
+            .toList();
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           children: [
-            SearchBox(hint: 'পণ্যের নামে খুঁজুন...', onChanged: (v) => setState(() => q = v)),
+            SearchBox(
+              hint: 'পণ্য / ক্রেতার নাম বা মোবাইল...',
+              onChanged: (v) => setState(() => q = v),
+              suggestions: suggestions,
+            ),
             const SizedBox(height: 14),
             if (list.isEmpty)
               const Padding(

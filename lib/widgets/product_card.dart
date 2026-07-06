@@ -11,11 +11,13 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final low = p.qty <= 10;
+    final outOfStock = p.qty <= 0;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        decoration: cardDeco,
+        decoration:
+            cardDeco.copyWith(border: outOfStock ? Border.all(color: const Color(0xFFFDECEC), width: 1.5) : null),
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
@@ -30,7 +32,16 @@ class ProductCard extends StatelessWidget {
                         child: Text(p.name,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kInk))),
-                    if (low) ...[
+                    if (outOfStock) ...[
+                      const SizedBox(width: 7),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration:
+                            BoxDecoration(color: const Color(0xFFFDECEC), borderRadius: BorderRadius.circular(7)),
+                        child: const Text('স্টক আউট',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: kRed)),
+                      ),
+                    ] else if (low) ...[
                       const SizedBox(width: 7),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -41,7 +52,41 @@ class ProductCard extends StatelessWidget {
                       ),
                     ],
                   ]),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F2FB),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.person_outline, size: 13, color: Color(0xFF7A66C0)),
+                        const SizedBox(width: 5),
+                        Text(
+                          p.supplierName.isNotEmpty ? p.supplierName : '—',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: p.supplierName.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Icon(Icons.phone_outlined, size: 13, color: Color(0xFF7A66C0)),
+                        const SizedBox(width: 5),
+                        Text(
+                          p.supplierMobile.isNotEmpty ? fmtPhone(p.supplierMobile) : '—',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: p.supplierMobile.isNotEmpty ? kSubInk : const Color(0xFFC9C4DA),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       _miniStat('ক্রয় মূল্য', taka(p.cost), kSubInk),

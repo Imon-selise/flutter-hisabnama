@@ -1,5 +1,6 @@
 class Sale {
   String id, productId, name, date;
+  String buyerName, buyerMobile;
   double qty, price, cost;
   Sale({
     required this.id,
@@ -9,6 +10,8 @@ class Sale {
     required this.price,
     required this.cost,
     required this.date,
+    this.buyerName = '',
+    this.buyerMobile = '',
   });
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -18,6 +21,8 @@ class Sale {
         'price': price,
         'cost': cost,
         'date': date,
+        'buyerName': buyerName,
+        'buyerMobile': buyerMobile,
       };
   factory Sale.fromJson(Map j) => Sale(
         id: j['id'],
@@ -27,5 +32,7 @@ class Sale {
         price: (j['price'] as num).toDouble(),
         cost: (j['cost'] as num).toDouble(),
         date: j['date'],
+        buyerName: j['buyerName'] ?? '',
+        buyerMobile: j['buyerMobile'] ?? '',
       );
 }

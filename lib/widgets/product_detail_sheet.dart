@@ -86,7 +86,12 @@ class _ProductDetailSheetState extends State<ProductDetailSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(children: [
                 _row('ক্রয় মূল্য', taka(p.cost), border: true),
-                _row('বিক্রয় মূল্য', taka(p.price)),
+                _row('বিক্রয় মূল্য', taka(p.price), border: true),
+                if (p.supplierName.isNotEmpty || p.supplierMobile.isNotEmpty) ...[
+                  _row('সরবরাহকারী',
+                      [if (p.supplierName.isNotEmpty) p.supplierName, if (p.supplierMobile.isNotEmpty) fmtPhone(p.supplierMobile)]
+                          .join(' · ')),
+                ],
               ]),
             ),
             const SizedBox(height: 18),
@@ -176,6 +181,8 @@ void _showEditDialog(BuildContext context, Product p) {
       TextEditingController(text: p.cost == p.cost.roundToDouble() ? p.cost.round().toString() : p.cost.toString());
   final priceCtrl =
       TextEditingController(text: p.price == p.price.roundToDouble() ? p.price.round().toString() : p.price.toString());
+  final supplierNameCtrl = TextEditingController(text: p.supplierName);
+  final supplierMobileCtrl = TextEditingController(text: p.supplierMobile.isNotEmpty ? fmtPhone(p.supplierMobile) : '+88');
   String unit = p.unit;
 
   showModalBottomSheet(
@@ -245,6 +252,25 @@ void _showEditDialog(BuildContext context, Product p) {
                     ),
                   ),
                 ]),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: supplierNameCtrl,
+                      decoration: const InputDecoration(labelText: 'সরবরাহকারীর নাম', border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: supplierMobileCtrl,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [PhoneFormatter()],
+                      decoration:
+                          const InputDecoration(labelText: 'সরবরাহকারীর মোবাইল', border: OutlineInputBorder()),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
@@ -261,6 +287,8 @@ void _showEditDialog(BuildContext context, Product p) {
                         unit,
                         double.tryParse(costCtrl.text) ?? 0,
                         double.tryParse(priceCtrl.text) ?? 0,
+                        supplierName: supplierNameCtrl.text.trim(),
+                        supplierMobile: rawPhone(supplierMobileCtrl.text.trim()),
                       );
                       Navigator.pop(ctx);
                       showToast(context, 'পণ্য আপডেট হয়েছে', kGreen);
